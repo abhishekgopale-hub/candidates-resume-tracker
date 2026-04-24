@@ -58,8 +58,9 @@ export const uploadResume = async (req, res) => {
 
       // SAVE FILE (UPDATED ✅)
       const ext = req.file.originalname.split(".").pop();
-      const newPath = `uploads/${resume_id}.${ext}`;
+      const newPath = path.join("uploads", `${resume_id}.${ext}`);
       fs.renameSync(req.file.path, newPath);
+	console.log("Saved file at:", newPath);
 
       // UPDATE resume_id + file_path (UPDATED ✅)
       await db.execute(

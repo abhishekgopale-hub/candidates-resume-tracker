@@ -81,7 +81,7 @@ export const handleSQLSearch = async (req, res) => {
 
       // ✅ actual link for frontend
       download_link: row.file_path
-        ? `http://localhost:5000/api/download/${row.id}`
+        ? `/api/download/${row.id}`
         : ""
     }));
 
@@ -120,12 +120,32 @@ export const exportSqlResults = async (req, res) => {
 
     const rawResults = await searchSQL(filters);
 
-    const results = normalizeData(rawResults).map(row => ({
-      ...row,
-      resume_link: row.file_path
-        ? `http://localhost:5000/api/download/${row.id}`
-        : ""
-    }));
+    
+       
+       
+
+const results = normalizeData(rawResults).map((row) => ({
+  ...row,
+
+  // hide file path
+  file_path: undefined,
+
+  // for UI label
+  download_resume: row.file_path ? "Download Resume" : "",
+
+  // backward compatibility (optional)
+  download_link: row.file_path
+    ? `/api/download/${row.id}`
+    : "",
+
+  // NEW correct field
+  resume_link: row.file_path
+    ? `/api/download/${row.id}`
+    : ""
+}));
+
+
+
 
     const workbook = await generateExcel(results);
 
