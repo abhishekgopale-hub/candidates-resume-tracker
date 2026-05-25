@@ -18,79 +18,193 @@ const generateHash = (buffer) => {
 };
 
 export const uploadResume = async (req, res) => {
+
   upload.single("resume")(req, res, async (err) => {
+
     try {
-      if (err) return res.status(400).json({ error: err.message });
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+      if (err) {
+        return res.status(400).json({
+          error: err.message
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          error: "No file uploaded"
+        });
+      }
 
       const buffer = fs.readFileSync(req.file.path);
+
       const fileHash = generateHash(buffer);
 
-      // DUPLICATE CHECK
+      /* =========================
+         DUPLICATE CHECK
+      ========================= */
+
       const [existing] = await db.execute(
         "SELECT id, resume_id FROM resumes WHERE file_hash = ?",
         [fileHash]
       );
 
       if (existing.length > 0) {
+
         return res.json({
           success: false,
-          message: `Resume already exists with ID: ${existing[0].resume_id}`
+          message:
+            `Resume already exists with ID: ${existing[0].resume_id}`
         });
+
       }
 
+      /* =========================
+         EXTRA DATA
+      ========================= */
+
       let extraData = {};
+
       if (req.body.extra_data) {
         extraData = JSON.parse(req.body.extra_data);
       }
 
-      // INSERT
+      /* =========================
+         INSERT
+      ========================= */
+
       const [insertResult] = await db.execute(
-        `INSERT INTO resumes (file_hash, expected_job_role, status)
-         VALUES (?, ?, ?)`,
-        [fileHash, extraData.job_role || "", "pending"]
+
+        `INSERT INTO resumes (
+
+          file_hash,
+          expected_job_role,
+          uploaded_by_name,
+          status
+
+        )
+        VALUES (?, ?, ?, ?)`,
+
+        [
+
+          fileHash,
+
+          extraData.job_role || "",
+
+          extraData.uploaded_by_name || "",
+
+          "pending"
+
+        ]
       );
 
       const id = insertResult.insertId;
 
-      // GENERATE RESUME ID
-      const resume_id = "RESUM" + String(id).padStart(4, "0");
+      /* =========================
+         GENERATE RESUME ID
+      ========================= */
 
-      // SAVE FILE (UPDATED ✅)
-      const ext = req.file.originalname.split(".").pop();
-      const newPath = path.join("uploads", `${resume_id}.${ext}`);
-      fs.renameSync(req.file.path, newPath);
-	console.log("Saved file at:", newPath);
+      const resume_id =
+        "RESUM" + String(id).padStart(4, "0");
 
-      // UPDATE resume_id + file_path (UPDATED ✅)
-      await db.execute(
-        "UPDATE resumes SET resume_id = ?, file_path = ? WHERE id = ?",
-        [resume_id, newPath, id]
+      /* =========================
+         SAVE FILE
+      ========================= */
+
+      const ext =
+        req.file.originalname
+          .split(".")
+          .pop();
+
+      const newPath = path.join(
+        "uploads",
+        `${resume_id}.${ext}`
       );
 
-      // RESPONSE
+      fs.renameSync(
+        req.file.path,
+        newPath
+      );
+
+      console.log(
+        "Saved file at:",
+        newPath
+      );
+
+      /* =========================
+         UPDATE FILE PATH
+      ========================= */
+
+      await db.execute(
+
+        "UPDATE resumes SET resume_id = ?, file_path = ? WHERE id = ?",
+
+        [
+          resume_id,
+          newPath,
+          id
+        ]
+
+      );
+
+      /* =========================
+         RESPONSE
+      ========================= */
+
       res.json({
+
         success: true,
+
         resume_id,
+
         id,
+
         status: "processing"
+
       });
 
-      // BACKGROUND PROCESS
+      /* =========================
+         BACKGROUND PROCESS
+      ========================= */
+
       (async () => {
+
         try {
+
           let parsedData;
 
-          if (ext === "doc" || ext === "docx") {
-            const text = await convertWordToText(newPath);
-            parsedData = await parseResumeWithGemini(text, extraData, true);
+          if (
+            ext === "doc" ||
+            ext === "docx"
+          ) {
+
+            const text =
+              await convertWordToText(newPath);
+
+            parsedData =
+              await parseResumeWithGemini(
+                text,
+                extraData,
+                true
+              );
+
           } else {
-            parsedData = await parseResumeWithGemini(newPath, extraData);
+
+            parsedData =
+              await parseResumeWithGemini(
+                newPath,
+                extraData
+              );
+
           }
 
-          // UPDATE FULL DATA
+          /* =========================
+             UPDATE FULL DATA
+          ========================= */
+
           await db.execute(
+
             `UPDATE resumes SET
+
               name = ?,
               phone = ?,
               email = ?,
@@ -108,32 +222,73 @@ export const uploadResume = async (req, res) => {
               brand_and_retail_chain_experience = ?,
               market_type_experience = ?,
               product_experience_tags = ?,
+              uploaded_by_name = ?,
               status = ?
+
             WHERE id = ?`,
+
             [
+
               parsedData.name || "",
+
               parsedData.phone || "",
+
               parsedData.email || "",
+
               parsedData.gender || "",
+
               parsedData.location?.area || "",
+
               parsedData.location?.city || "",
+
               parsedData.location?.state || "",
-              JSON.stringify(parsedData.skills || []),
-              JSON.stringify(parsedData.languages || []),
+
+              JSON.stringify(
+                parsedData.skills || []
+              ),
+
+              JSON.stringify(
+                parsedData.languages || []
+              ),
+
               parsedData.experience_summary || "",
+
               parsedData.experience_years || 0,
+
               parsedData.education || "",
+
               parsedData.current_role || "",
-              JSON.stringify(parsedData.industry || []),
-              JSON.stringify(parsedData.brand_and_retail_chain_experience || []),
-              JSON.stringify(parsedData.market_type_experience || []),
-              JSON.stringify(parsedData.product_experience_tags || []),
+
+              JSON.stringify(
+                parsedData.industry || []
+              ),
+
+              JSON.stringify(
+                parsedData.brand_and_retail_chain_experience || []
+              ),
+
+              JSON.stringify(
+                parsedData.market_type_experience || []
+              ),
+
+              JSON.stringify(
+                parsedData.product_experience_tags || []
+              ),
+
+              /* ✅ NEW */
+              extraData.uploaded_by_name || "",
+
               "Active",
+
               id
+
             ]
           );
 
-          // MASTER INSERT
+          /* =========================
+             MASTER INSERTS
+          ========================= */
+
           await insertMasterValues(
             db,
             "areas_master",
@@ -155,19 +310,40 @@ export const uploadResume = async (req, res) => {
             parsedData?.brand_and_retail_chain_experience
           );
 
-          console.log("✅ Master data inserted");
+          console.log(
+            "✅ Master data inserted"
+          );
 
         } catch (err) {
-          console.error("🔥 Background error:", err);
+
+          console.error(
+            "🔥 Background error:",
+            err
+          );
+
         }
+
       })();
 
     } catch (err) {
-      console.error("🔥 FULL ERROR:", err);
+
+      console.error(
+        "🔥 FULL ERROR:",
+        err
+      );
+
       res.status(500).json({
-        error: err.message || "Unknown error",
+
+        error:
+          err.message ||
+          "Unknown error",
+
         stack: err.stack
+
       });
+
     }
+
   });
+
 };
