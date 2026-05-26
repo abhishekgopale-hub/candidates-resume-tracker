@@ -51,3 +51,4 @@ console.log("========== INSERT SUCCESS ==========");
 console.log("Resume Inserted");
 console.log("Uploader Name:", extraData.uploaded_by_name);
 console.log("====================================");
+console.log("Insert Result:", insertResult);
