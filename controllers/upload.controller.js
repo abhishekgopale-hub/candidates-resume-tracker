@@ -14,7 +14,10 @@ const upload = multer({
 });
 
 const generateHash = (buffer) => {
-  return crypto.createHash("sha256").update(buffer).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(buffer)
+    .digest("hex");
 };
 
 export const uploadResume = async (req, res) => {
@@ -65,8 +68,34 @@ export const uploadResume = async (req, res) => {
       let extraData = {};
 
       if (req.body.extra_data) {
+
+        console.log("========= RAW EXTRA DATA =========");
+        console.log(req.body.extra_data);
+
         extraData = JSON.parse(req.body.extra_data);
+
+        console.log("========= PARSED EXTRA DATA =========");
+        console.log(extraData);
+
+        console.log("========= UPLOADER NAME =========");
+        console.log(extraData.uploaded_by_name);
+
       }
+
+      /* =========================
+         INSERT LOG
+      ========================= */
+
+      console.log("========= INSERT VALUES =========");
+
+      console.log({
+        fileHash,
+        expected_job_role: extraData.job_role,
+        uploaded_by_name: extraData.uploaded_by_name,
+        status: "pending"
+      });
+
+      console.log("=================================");
 
       /* =========================
          INSERT
@@ -75,25 +104,18 @@ export const uploadResume = async (req, res) => {
       const [insertResult] = await db.execute(
 
         `INSERT INTO resumes (
-
           file_hash,
           expected_job_role,
           uploaded_by_name,
           status
-
         )
         VALUES (?, ?, ?, ?)`,
 
         [
-
           fileHash,
-
           extraData.job_role || "",
-
           extraData.uploaded_by_name || "",
-
           "pending"
-
         ]
       );
 
@@ -120,30 +142,19 @@ export const uploadResume = async (req, res) => {
         `${resume_id}.${ext}`
       );
 
-      fs.renameSync(
-        req.file.path,
-        newPath
-      );
-
-      console.log(
-        "Saved file at:",
-        newPath
-      );
+      fs.renameSync(req.file.path, newPath);
 
       /* =========================
          UPDATE FILE PATH
       ========================= */
 
       await db.execute(
-
         "UPDATE resumes SET resume_id = ?, file_path = ? WHERE id = ?",
-
         [
           resume_id,
           newPath,
           id
         ]
-
       );
 
       /* =========================
@@ -151,15 +162,10 @@ export const uploadResume = async (req, res) => {
       ========================= */
 
       res.json({
-
         success: true,
-
         resume_id,
-
         id,
-
         status: "processing"
-
       });
 
       /* =========================
@@ -204,7 +210,6 @@ export const uploadResume = async (req, res) => {
           await db.execute(
 
             `UPDATE resumes SET
-
               name = ?,
               phone = ?,
               email = ?,
@@ -224,69 +229,56 @@ export const uploadResume = async (req, res) => {
               product_experience_tags = ?,
               uploaded_by_name = ?,
               status = ?
-
             WHERE id = ?`,
 
             [
-
               parsedData.name || "",
-
               parsedData.phone || "",
-
               parsedData.email || "",
-
               parsedData.gender || "",
-
               parsedData.location?.area || "",
-
               parsedData.location?.city || "",
-
               parsedData.location?.state || "",
-
-              JSON.stringify(
-                parsedData.skills || []
-              ),
-
-              JSON.stringify(
-                parsedData.languages || []
-              ),
-
+              JSON.stringify(parsedData.skills || []),
+              JSON.stringify(parsedData.languages || []),
               parsedData.experience_summary || "",
-
               parsedData.experience_years || 0,
-
               parsedData.education || "",
-
               parsedData.current_role || "",
-
-              JSON.stringify(
-                parsedData.industry || []
-              ),
-
+              JSON.stringify(parsedData.industry || []),
               JSON.stringify(
                 parsedData.brand_and_retail_chain_experience || []
               ),
-
               JSON.stringify(
                 parsedData.market_type_experience || []
               ),
-
               JSON.stringify(
                 parsedData.product_experience_tags || []
               ),
 
-              /* ✅ NEW */
               extraData.uploaded_by_name || "",
 
               "Active",
 
               id
-
             ]
           );
 
           /* =========================
-             MASTER INSERTS
+             FINAL UPDATE LOG
+          ========================= */
+
+          console.log("========= FINAL UPDATE =========");
+
+          console.log({
+            uploaded_by_name:
+              extraData.uploaded_by_name
+          });
+
+          console.log("================================");
+
+          /* =========================
+             MASTER INSERT
           ========================= */
 
           await insertMasterValues(
@@ -310,9 +302,7 @@ export const uploadResume = async (req, res) => {
             parsedData?.brand_and_retail_chain_experience
           );
 
-          console.log(
-            "✅ Master data inserted"
-          );
+          console.log("✅ Master data inserted");
 
         } catch (err) {
 
@@ -333,13 +323,8 @@ export const uploadResume = async (req, res) => {
       );
 
       res.status(500).json({
-
-        error:
-          err.message ||
-          "Unknown error",
-
+        error: err.message || "Unknown error",
         stack: err.stack
-
       });
 
     }
