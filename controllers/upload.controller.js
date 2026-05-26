@@ -83,7 +83,7 @@ export const uploadResume = async (req, res) => {
 
         )
         VALUES (?, ?, ?, ?)`,
-
+      console.log("uploaded_by:", extraData.uploaded_by_name),
         [
 
           fileHash,
