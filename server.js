@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 const PORT = process.env.PORT || 5000;
 import express from "express";
 import cors from "cors";
@@ -8,9 +11,6 @@ import searchRoutes from "./routes/search.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 
 import { requireAuth } from "./middleware/auth.middleware.js";
-
-import dotenv from "dotenv";
-dotenv.config();
 
 const app = express();
 
