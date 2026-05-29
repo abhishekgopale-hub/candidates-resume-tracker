@@ -5,6 +5,9 @@ import db from "./config/db.js";
 
 import uploadRoutes from "./routes/upload.routes.js";
 import searchRoutes from "./routes/search.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+
+import { requireAuth } from "./middleware/auth.middleware.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -14,9 +17,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// APIs
+// Public APIs
+app.use("/api/auth", authRoutes);
 app.use("/api/upload", uploadRoutes);
-app.use("/api/search", searchRoutes);
+
+// Protected APIs (require login)
+app.use("/api/search", requireAuth, searchRoutes);
 app.get("/api/masters", async (req, res) => {
   const [cities] = await db.execute("SELECT city_name FROM cities_master");
   const [roles] = await db.execute("SELECT job_title FROM job_titles_master");

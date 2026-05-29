@@ -5,6 +5,23 @@ import db from "../config/db.js";
 import "dotenv/config";
 const BASE_URL = process.env.BASE_URL;
 
+/* ================= GET USER ID FROM HEADER ================= */
+
+const getUserIdFromAuth = async (authHeader) => {
+  if (!authHeader) return null;
+  
+  try {
+    const [users] = await db.execute(
+      "SELECT id FROM users WHERE user_id = ?",
+      [authHeader]
+    );
+    return users.length > 0 ? users[0].id : null;
+  } catch (err) {
+    console.error("Failed to get user ID:", err);
+    return null;
+  }
+};
+
 /* ================= NORMALIZE ================= */
 
 const normalizeData = (rows) => {
@@ -87,6 +104,32 @@ export const handleSQLSearch = async (req, res) => {
 
     console.log("✅ FINAL RESULTS:", results);
 
+    // Log search action
+    const authHeader = req.headers.authorization;
+    const userId = await getUserIdFromAuth(authHeader);
+    
+    if (userId) {
+      try {
+        await db.execute(
+          `INSERT INTO user_search_download_logs 
+           (user_id, action_type, search_query, results_count, ip_address, action_time) 
+           VALUES (?, ?, ?, ?, ?, NOW())`,
+          [
+            userId,
+            'search',
+            JSON.stringify(filters),
+            results.length,
+            req.ip || req.connection.remoteAddress
+          ]
+        );
+        console.log(`✅ Search logged for user: ${authHeader}`);
+      } catch (logErr) {
+        console.error("❌ Failed to log search:", logErr.message);
+      }
+    } else {
+      console.warn("⚠️ Could not identify user for logging");
+    }
+
     res.json({ results });
 
   } catch (err) {
@@ -120,32 +163,52 @@ export const exportSqlResults = async (req, res) => {
 
     const rawResults = await searchSQL(filters);
 
+    const results = normalizeData(rawResults).map((row) => ({
+      ...row,
+
+      // hide file path
+      file_path: undefined,
+
+      // for UI label
+      download_resume: row.file_path ? "Download Resume" : "",
+
+      // backward compatibility (optional)
+      download_link: row.file_path
+        ? `/api/download/${row.id}`
+        : "",
+
+      // NEW correct field
+      resume_link: row.file_path
+        ? `/api/download/${row.id}`
+        : ""
+    }));
+
+    // Log export/download action
+    const authHeader = req.headers.authorization;
+    const userId = await getUserIdFromAuth(authHeader);
     
-       
-       
-
-const results = normalizeData(rawResults).map((row) => ({
-  ...row,
-
-  // hide file path
-  file_path: undefined,
-
-  // for UI label
-  download_resume: row.file_path ? "Download Resume" : "",
-
-  // backward compatibility (optional)
-  download_link: row.file_path
-    ? `/api/download/${row.id}`
-    : "",
-
-  // NEW correct field
-  resume_link: row.file_path
-    ? `/api/download/${row.id}`
-    : ""
-}));
-
-
-
+    if (userId) {
+      try {
+        await db.execute(
+          `INSERT INTO user_search_download_logs 
+           (user_id, action_type, search_query, results_count, download_file_name, ip_address, action_time) 
+           VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            userId,
+            'export',
+            JSON.stringify(filters),
+            results.length,
+            'results.xlsx',
+            req.ip || req.connection.remoteAddress
+          ]
+        );
+        console.log(`✅ Export logged for user: ${authHeader}`);
+      } catch (logErr) {
+        console.error("❌ Failed to log export:", logErr.message);
+      }
+    } else {
+      console.warn("⚠️ Could not identify user for logging");
+    }
 
     const workbook = await generateExcel(results);
 
