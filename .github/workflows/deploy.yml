@@ -20,8 +20,10 @@ jobs:
           script: |
             cd ~/candidates-resume-tracker
 
-            git pull origin master
+            git pull origin main
 
             npm install
+
+            npm run init-db
 
             pm2 restart backend
