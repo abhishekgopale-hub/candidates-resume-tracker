@@ -1,11 +1,10 @@
 # Login System & Visit Logging Documentation
 
 ## Overview
-This system provides user authentication with a visit logging feature to track consistent check-ins.
+This system provides user authentication with a visit logging feature to track user access.
 
 ## Features
 ✅ User login with ID and password  
-✅ Common password for all users: `abc@123`  
 ✅ Visit log tracking (login/logout times)  
 ✅ Session management  
 ✅ Visit history report  
@@ -15,20 +14,16 @@ This system provides user authentication with a visit logging feature to track c
 ## Setup Instructions
 
 ### 1. Initialize Database
-Run this command once to create tables and insert sample users:
+Run this command once to create tables:
 
 ```bash
-node scripts/initDB.js
+npm run init-db
 ```
 
 This will:
 - Create `users` table
 - Create `visit_logs` table
-- Insert 4 sample users:
-  - emp001 (John Doe)
-  - emp002 (Jane Smith)
-  - emp003 (Mike Johnson)
-  - emp004 (Sarah Williams)
+- Create `user_search_download_logs` table
 
 ### 2. Update package.json
 Add this script to your `package.json`:
@@ -55,8 +50,8 @@ npm start
 **Request:**
 ```json
 {
-  "user_id": "emp001",
-  "password": "abc@123"
+  "user_id": "your_user_id",
+  "password": "your_password"
 }
 ```
 
@@ -67,8 +62,8 @@ npm start
   "message": "Login successful",
   "user": {
     "id": 1,
-    "user_name": "John Doe",
-    "user_id": "emp001"
+    "user_name": "User Name",
+    "user_id": "user_id"
   }
 }
 ```
@@ -76,7 +71,7 @@ npm start
 **Response (Error):**
 ```json
 {
-  "error": "Invalid user ID" // or "Invalid password"
+  "error": "Invalid user ID or password"
 }
 ```
 
@@ -91,8 +86,8 @@ npm start
   "authenticated": true,
   "user": {
     "id": 1,
-    "user_name": "John Doe",
-    "user_id": "emp001",
+    "user_name": "User Name",
+    "user_id": "user_id",
     "loginTime": "2026-05-28T10:30:00.000Z"
   }
 }

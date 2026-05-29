@@ -7,13 +7,7 @@
 npm run init-db
 ```
 
-This creates 4 sample users:
-- User ID: `emp001` | Name: John Doe
-- User ID: `emp002` | Name: Jane Smith  
-- User ID: `emp003` | Name: Mike Johnson
-- User ID: `emp004` | Name: Sarah Williams
-
-**Password for all users:** `abc@123`
+This creates the necessary database tables.
 
 ### Step 2: Start Server
 ```bash
@@ -31,8 +25,8 @@ The server runs on `http://localhost:5000`
 curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "emp001",
-    "password": "abc@123"
+    "user_id": "your_user_id",
+    "password": "your_password"
   }'
 ```
 
@@ -43,8 +37,8 @@ curl -X POST http://localhost:5000/api/auth/login \
   "message": "Login successful",
   "user": {
     "id": 1,
-    "user_name": "John Doe",
-    "user_id": "emp001"
+    "user_name": "User Name",
+    "user_id": "your_user_id"
   }
 }
 ```
@@ -54,7 +48,7 @@ curl -X POST http://localhost:5000/api/auth/login \
 ## 📊 Key Features
 
 ### ✅ Login System
-- Login with User ID + Password (abc@123)
+- Login with User ID + Password
 - Returns user details on success
 - Blocks unauthorized access
 
@@ -77,7 +71,7 @@ curl http://localhost:5000/api/auth/visit-logs
 
 Get specific user's history:
 ```bash
-curl http://localhost:5000/api/auth/visit-logs?user_id=emp001
+curl http://localhost:5000/api/auth/visit-logs?user_id=your_user_id
 ```
 
 ---
